@@ -351,7 +351,8 @@ EOF
 struct user_arg_ptr;
 EOF
 
-    if grep -q "ksu_handle_execveat_init" "$SUCOMPAT_C" 2>/dev/null; then
+    if grep -q "ksu_handle_execveat_init" "$SUCOMPAT_C" 2>/dev/null && \
+       ! grep -qE "static[[:space:]]+(inline[[:space:]]+)?void[[:space:]]+ksu_handle_execveat_init" "$SUCOMPAT_C" 2>/dev/null; then
         cat >> "$SUCOMPAT_H" << 'EOF'
 int ksu_handle_execveat_init(struct filename *filename,
     struct user_arg_ptr *argv_user, struct user_arg_ptr *envp_user);
