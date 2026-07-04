@@ -1318,19 +1318,16 @@ fix_dirty_sepolicy() {
     # Step 3: Remove undefined context_struct_compute_av_fn extern (it's static in kernel)
     # The upstream file uses it conditionally; replace with direct call
     if grep -q "context_struct_compute_av_fn" "$SELINUX_HIDE_C" 2>/dev/null; then
-        sed -i '/^static void (\*context_struct_compute_av_fn)/,+2d' "$SELINUX_HIDE_C"
-        sed -i '/if (context_struct_compute_av_fn)/,+4{
-            /if (context_struct_compute_av_fn)/c\    context_struct_compute_av(policydb, scontext, tcontext, tclass, avd, NULL);
-            /context_struct_compute_av_fn(policydb/d
-            /} else {/d
-            /context_struct_compute_av(policydb/d
-            /^[[:space:]]*}$/d
+        sed -i '/^extern void context_struct_compute_av_fn/,/struct extended_perms \*xperms);/d' "$SELINUX_HIDE_C"
+        sed -i '/if (context_struct_compute_av_fn) {/{
+            N;N;N;N
+            s/if (context_struct_compute_av_fn) {\n.*context_struct_compute_av_fn.*\n.*} else {\n.*context_struct_compute_av(.*\n.*}/context_struct_compute_av(policydb, scontext, tcontext, tclass, avd, NULL);/
         }' "$SELINUX_HIDE_C"
     fi
 
     # Step 4: Remove undefined security_dump_masked_av_fn extern (debug-only, safe to drop)
     if grep -q "security_dump_masked_av_fn" "$SELINUX_HIDE_C" 2>/dev/null; then
-        sed -i '/^static void (\*security_dump_masked_av_fn)/,+1d' "$SELINUX_HIDE_C"
+        sed -i '/^extern void security_dump_masked_av_fn/,/const char \*reason);/d' "$SELINUX_HIDE_C"
         sed -i '/if (security_dump_masked_av_fn)/,/masked, "bounds");/d' "$SELINUX_HIDE_C"
         # Remove the find_kernel_symbol_exact line for security_dump_masked_av
         sed -i '/security_dump_masked_av_fn = find_kernel_symbol_exact/,+3d' "$SELINUX_HIDE_C"
