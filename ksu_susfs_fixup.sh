@@ -1535,7 +1535,11 @@ SULOG_EXECVE_EOF
         if [ -f "$SULOG_EVENT_H" ] && ! grep -q "ksu_sulog_capture_root_execve" "$SULOG_EVENT_H" 2>/dev/null; then
             sed -i '/ksu_sulog_capture_sucompat/i struct ksu_sulog_pending_event *ksu_sulog_capture_root_execve(const char __user *filename_user, const char __user *const __user *argv_user, gfp_t gfp);' "$SULOG_EVENT_H"
         fi
-        fix_dirty_sepolicy
+        if [ "$MANAGER" != "sukisu" ]; then
+            fix_dirty_sepolicy
+        else
+            echo "[SUSFS-Fixup] selinux_hide.c: Skipping DirtySepolicy hook restore for sukisu (known link/compile incompatibility with current SukiSU-Ultra builtin — see upstream v4.1.3 selinux_hide changes). Core SUSFS path/mount hiding unaffected; /sys/fs/selinux hiding layer reduced for this variant."
+        fi
         fix_ksu_late_loaded
         fix_dirty_sepolicy_seqno
         fix_backup_sepolicy_leak
