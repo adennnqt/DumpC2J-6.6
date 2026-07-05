@@ -71,6 +71,22 @@ detect_manager() {
 MANAGER=$(detect_manager "$KSU_KERNEL" "$MANAGER_HINT")
 echo "[SUSFS-Fixup] Manager: $MANAGER"
 
+if [ "$MANAGER" = "sukisu" ]; then
+    # Upstream selinux_hide.c on the current "builtin" branch itself is broken
+    # (lsm_hook symbol resolution refactor not finished upstream — confirmed
+    # via community issue + independently confirmed by another builder's own
+    # canary system blacklisting this same commit). Excluding it from the
+    # Kbuild object list entirely, rather than patching its contents, since
+    # the file is broken even unmodified. Feature loss: selinux-policy
+    # hiding (Duck Detector) disabled for sukisu; core SUSFS unaffected.
+    for kbuild_candidate in "$KSU_KERNEL/Kbuild" "$KSU_KERNEL/Makefile"; do
+        if [ -f "$kbuild_candidate" ] && grep -q "selinux_hide" "$kbuild_candidate" 2>/dev/null; then
+            sed -i '/selinux_hide/s/^/#/' "$kbuild_candidate"
+            echo "[SUSFS-Fixup] $(basename "$kbuild_candidate"): Excluded selinux_hide.o from build for sukisu (upstream builtin branch is broken)"
+        fi
+    done
+fi
+
 if [ "$MANAGER" = "resukisu" ]; then
     echo "[SUSFS-Fixup] ReSukiSU has native SUSFS — applying typo fix."
     if [ -f "$KSU_KERNEL/runtime/ksud_integration.c" ]; then
