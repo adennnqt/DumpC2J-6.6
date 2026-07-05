@@ -1257,7 +1257,9 @@ fix_ksu_late_loaded() {
 # static and not exported. selinux_hide.c has its own local copy, so remove
 # the extern reference and always use the local implementation.
 SELINUX_HIDE_C="$KSU_KERNEL/feature/selinux_hide.c"
-if [ -f "$SELINUX_HIDE_C" ] && grep -q "context_struct_compute_av_fn\|security_dump_masked_av_fn" "$SELINUX_HIDE_C" 2>/dev/null; then
+if [ "$MANAGER" = "sukisu" ]; then
+    echo "[SUSFS-Fixup] selinux_hide.c: Skipping shared context_struct_compute_av_fn fixup for sukisu (handled/skipped entirely by fix_dirty_sepolicy guard)"
+elif [ -f "$SELINUX_HIDE_C" ] && grep -q "context_struct_compute_av_fn\|security_dump_masked_av_fn" "$SELINUX_HIDE_C" 2>/dev/null; then
     # Remove the extern declarations (multi-line)
     sed -i '/^extern void context_struct_compute_av_fn/,/struct extended_perms \*xperms);/d' "$SELINUX_HIDE_C"
     sed -i '/^extern void security_dump_masked_av_fn/,/const char \*reason);/d' "$SELINUX_HIDE_C"
