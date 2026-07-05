@@ -1510,6 +1510,17 @@ fix_app_zygote_bypass() {
     sed -i 's/return is_sid_match(cred, cached_zygote_sid, ZYGOTE_CONTEXT);/return is_sid_match(cred, cached_zygote_sid, ZYGOTE_CONTEXT) || is_sid_match(cred, cached_app_zygote_sid, APP_ZYGOTE_CONTEXT);/g' "$SELINUX_C"
 }
 
+fix_context_struct_compute_av_link() {
+    local SELINUX_HIDE_C="$KSU_KERNEL/feature/selinux_hide.c"
+    [ -f "$SELINUX_HIDE_C" ] || return 0
+    if grep -q "if ((void \*)context_struct_compute_av_fn != NULL) {" "$SELINUX_HIDE_C" 2>/dev/null; then
+        sed -i '/if ((void \*)context_struct_compute_av_fn != NULL) {/,/^[[:space:]]*}$/c\\
+\tcontext_struct_compute_av(policydb, scontext, tcontext, tclass, avd, NULL);' "$SELINUX_HIDE_C"
+        echo "[SUSFS-Fixup] selinux_hide.c: Forced context_struct_compute_av (fn variant unlinkable on this kernel)"
+    fi
+}
+fix_context_struct_compute_av_link
+
 case "$MANAGER" in
     resukisu|sukisu|yukisu)
         fix_sulog_type_mismatch
