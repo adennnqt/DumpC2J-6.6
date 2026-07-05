@@ -50,9 +50,9 @@ detect_manager() {
         url=$(git -C "$parent" remote get-url origin 2>/dev/null || true)
         case "$url" in
             *KernelSU-Next*|*kernelsu-next*) echo "ksu-next"; return ;;
+            *ReSukiSU*|*resukisu*)           echo "resukisu"; return ;;
             *sukisu*|*SukiSU*|*Sukisu*)      echo "sukisu"; return ;;
             *YukiSU*|*yukisu*)               echo "yukisu"; return ;;
-            *ReSukiSU*|*resukisu*)           echo "resukisu"; return ;;
         esac
     fi
 
