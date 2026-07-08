@@ -71,6 +71,7 @@ detect_manager() {
 MANAGER=$(detect_manager "$KSU_KERNEL" "$MANAGER_HINT")
 echo "[SUSFS-Fixup] Manager: $MANAGER"
 
+set -x
 if [ "$MANAGER" = "sukisu" ]; then
     # Upstream selinux_hide.c on the current "builtin" branch itself is broken
     # (lsm_hook symbol resolution refactor not finished upstream — confirmed
