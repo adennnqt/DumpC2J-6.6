@@ -1,4 +1,5 @@
 #!/bin/bash
+cd "$(dirname "$0")" || exit 1
 # Droidspaces modular setup script
 # This script applies the confirmed kABI patch and enables the required configs.
 
