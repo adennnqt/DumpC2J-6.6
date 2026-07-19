@@ -34,6 +34,7 @@ if [ -f "$OUT_DIR/.config" ]; then
         "CONFIG_POSIX_MQUEUE"
         "CONFIG_IPC_NS"
         "CONFIG_PID_NS"
+        "CONFIG_USER_NS"
         "CONFIG_DEVTMPFS"
         "CONFIG_NETFILTER_XT_MATCH_ADDRTYPE"
         "CONFIG_NETFILTER_XT_TARGET_REJECT"
