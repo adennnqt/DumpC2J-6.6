@@ -18,6 +18,14 @@ int soc_sched_lib_name_capacity;
 #define PIPELINE_BUSY_THRESH_12MS_WINDOW 11
 #define PIPELINE_BUSY_THRESH_16MS_WINDOW 15
 unsigned int min_demand_for_activity_cnt;
+
+static const unsigned int default_input_boost_freq[WALT_NR_CPUS] = {
+	1075200, 1075200,          /* CPU0-1  cluster A (efficiency) */
+	1632000, 1632000, 1632000, /* CPU2-4  cluster B (performance) */
+	1516800, 1516800,          /* CPU5-6  cluster C (mid) */
+	1670400                    /* CPU7    cluster D (prime) */
+};
+
 void walt_config(void)
 {
 	int i, j, cpu;
@@ -74,7 +82,7 @@ void walt_config(void)
 		sysctl_sched_coloc_busy_hyst_cpu_busy_pct[i] = 10;
 		sysctl_sched_util_busy_hyst_cpu[i] = 5000000;
 		sysctl_sched_util_busy_hyst_cpu_util[i] = 15;
-		sysctl_input_boost_freq[i] = 0;
+		sysctl_input_boost_freq[i] = default_input_boost_freq[i];
 	}
 
 	for (i = 0; i < MAX_CLUSTERS; i++) {

@@ -378,7 +378,7 @@ static void smart_freq_update_one_cluster(struct walt_sched_cluster *cluster,
 	waltgov_run_callback(rq, WALT_CPUFREQ_SMART_FREQ_BIT);
 }
 
-#define UNCAP_THRES		300000000
+#define UNCAP_THRES		120000000
 #define UTIL_THRESHOLD		90
 static bool thres_based_uncap(u64 window_start, struct walt_sched_cluster *cluster)
 {
