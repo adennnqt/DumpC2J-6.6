@@ -20,7 +20,10 @@ else
 fi
 
 LD_VERSION=$(LC_ALL=C $LD -v | head -n1 |
-		sed -e 's/(compatible with [^)]*)//' -e 's/[[:space:]]*$//')
+                sed -e 's/(compatible with [^)]*)//' \
+                    -e 's/([^()]*)//g' \
+                    -e 's/[[:space:]]\{2,\}/ /g' \
+                    -e 's/[[:space:]]*$//')
 
 cat <<EOF
 #define UTS_MACHINE		"${UTS_MACHINE}"
