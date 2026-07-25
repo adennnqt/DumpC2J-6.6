@@ -359,7 +359,7 @@ const char * const migratetype_names[MIGRATE_TYPES] = {
 
 unsigned long nr_free_highatomic[MAX_NR_ZONES] = {0};
 
-int min_free_kbytes = 1024;
+int min_free_kbytes = 4096;
 int user_min_free_kbytes = -1;
 static int watermark_boost_factor __read_mostly = 15000;
 static int watermark_scale_factor = 10;
