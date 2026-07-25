@@ -77,7 +77,7 @@ EXPORT_TRACEPOINT_SYMBOL_GPL(sched_stat_runtime);
  *
  * (default: 6ms * (1 + ilog(ncpus)), units: nanoseconds)
  */
-unsigned int sysctl_sched_latency			= 6000000ULL;
+unsigned int sysctl_sched_latency                    = 4000000ULL;
 EXPORT_SYMBOL_GPL(sysctl_sched_latency);
 
 /*
