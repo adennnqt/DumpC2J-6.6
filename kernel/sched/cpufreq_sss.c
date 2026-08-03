@@ -848,3 +848,10 @@ struct cpufreq_governor sss_gov = {
 };
 
 cpufreq_governor_init(sss_gov);
+
+#ifdef CONFIG_CPU_FREQ_DEFAULT_GOV_SSS
+struct cpufreq_governor *cpufreq_default_governor(void)
+{
+	return &sss_gov;
+}
+#endif
