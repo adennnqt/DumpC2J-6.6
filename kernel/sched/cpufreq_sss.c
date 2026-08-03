@@ -128,7 +128,7 @@ static void sss_deferred_update(struct sss_policy *sg_policy)
 }
 
 static __always_inline
-unsigned long get_capacity_ref_freq(struct cpufreq_policy *policy)
+unsigned long sss_get_capacity_ref_freq(struct cpufreq_policy *policy)
 {
         unsigned int freq = arch_scale_freq_ref(policy->cpu);
 
@@ -164,7 +164,7 @@ static unsigned int sss_get_next_freq(struct sss_policy *sg_policy,
         if (max)
                 load_pct = (unsigned int)((util * 100) / max);
 
-        freq = get_capacity_ref_freq(policy);
+        freq = sss_get_capacity_ref_freq(policy);
         util = map_util_perf(util);
         trace_android_vh_map_util_freq(util, freq, max, &next_freq, policy,
                         &sg_policy->need_freq_update);
@@ -273,7 +273,7 @@ static bool sss_cpu_is_busy(struct sss_cpu *sg_cpu)
 static inline bool sss_cpu_is_busy(struct sss_cpu *sg_cpu) { return false; }
 #endif /* CONFIG_NO_HZ_COMMON */
 
-static inline void ignore_dl_rate_limit(struct sss_cpu *sg_cpu)
+static inline void sss_ignore_dl_rate_limit(struct sss_cpu *sg_cpu)
 {
         if (cpu_bw_dl(cpu_rq(sg_cpu->cpu)) > sg_cpu->bw_dl)
                 sg_cpu->sg_policy->limits_changed = true;
@@ -286,7 +286,7 @@ static inline bool sss_update_single_common(struct sss_cpu *sg_cpu,
         sss_iowait_boost(sg_cpu, time, flags);
         sg_cpu->last_update = time;
 
-        ignore_dl_rate_limit(sg_cpu);
+        sss_ignore_dl_rate_limit(sg_cpu);
 
         if (!sss_should_update_freq(sg_cpu->sg_policy, time))
                 return false;
@@ -392,7 +392,7 @@ sss_update_shared(struct update_util_data *hook, u64 time, unsigned int flags)
         sss_iowait_boost(sg_cpu, time, flags);
         sg_cpu->last_update = time;
 
-        ignore_dl_rate_limit(sg_cpu);
+        sss_ignore_dl_rate_limit(sg_cpu);
 
         if (sss_should_update_freq(sg_policy, time)) {
                 next_f = sss_next_freq_shared(sg_cpu, time);
@@ -436,8 +436,8 @@ static void sss_irq_work(struct irq_work *irq_work)
 
 /************************** sysfs interface ************************/
 
-static struct sss_tunables *global_tunables;
-static DEFINE_MUTEX(global_tunables_lock);
+static struct sss_tunables *sss_global_tunables;
+static DEFINE_MUTEX(sss_global_tunables_lock);
 
 static inline struct sss_tunables *to_sss_tunables(struct gov_attr_set *attr_set)
 {
@@ -660,7 +660,7 @@ static struct sss_tunables *sss_tunables_alloc(struct sss_policy *sg_policy)
         if (tunables) {
                 gov_attr_set_init(&tunables->attr_set, &sg_policy->tunables_hook);
                 if (!have_governor_per_policy())
-                        global_tunables = tunables;
+                        sss_global_tunables = tunables;
         }
         return tunables;
 }
@@ -668,7 +668,7 @@ static struct sss_tunables *sss_tunables_alloc(struct sss_policy *sg_policy)
 static void sss_clear_global_tunables(void)
 {
         if (!have_governor_per_policy())
-                global_tunables = NULL;
+                sss_global_tunables = NULL;
 }
 
 static int sss_init(struct cpufreq_policy *policy)
@@ -692,17 +692,17 @@ static int sss_init(struct cpufreq_policy *policy)
         if (ret)
                 goto free_sg_policy;
 
-        mutex_lock(&global_tunables_lock);
+        mutex_lock(&sss_global_tunables_lock);
 
-        if (global_tunables) {
+        if (sss_global_tunables) {
                 if (WARN_ON(have_governor_per_policy())) {
                         ret = -EINVAL;
                         goto stop_kthread;
                 }
                 policy->governor_data = sg_policy;
-                sg_policy->tunables = global_tunables;
+                sg_policy->tunables = sss_global_tunables;
 
-                gov_attr_set_get(&global_tunables->attr_set, &sg_policy->tunables_hook);
+                gov_attr_set_get(&sss_global_tunables->attr_set, &sg_policy->tunables_hook);
                 goto out;
         }
 
@@ -727,7 +727,7 @@ static int sss_init(struct cpufreq_policy *policy)
                 goto fail;
 
 out:
-        mutex_unlock(&global_tunables_lock);
+        mutex_unlock(&sss_global_tunables_lock);
         return 0;
 
 fail:
@@ -737,7 +737,7 @@ fail:
 
 stop_kthread:
         sss_kthread_stop(sg_policy);
-        mutex_unlock(&global_tunables_lock);
+        mutex_unlock(&sss_global_tunables_lock);
 
 free_sg_policy:
         sss_policy_free(sg_policy);
@@ -755,14 +755,14 @@ static void sss_exit(struct cpufreq_policy *policy)
         struct sss_tunables *tunables = sg_policy->tunables;
         unsigned int count;
 
-        mutex_lock(&global_tunables_lock);
+        mutex_lock(&sss_global_tunables_lock);
 
         count = gov_attr_set_put(&tunables->attr_set, &sg_policy->tunables_hook);
         policy->governor_data = NULL;
         if (!count)
                 sss_clear_global_tunables();
 
-        mutex_unlock(&global_tunables_lock);
+        mutex_unlock(&sss_global_tunables_lock);
 
         sss_kthread_stop(sg_policy);
         sss_policy_free(sg_policy);
