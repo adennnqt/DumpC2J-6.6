@@ -90,11 +90,23 @@ static bool sss_up_down_rate_limit(struct sss_policy *sg_policy, u64 time,
 {
         s64 delta_ns = time - sg_policy->last_freq_update_time;
 
-        if (next_freq > sg_policy->next_freq)
-                return delta_ns < sg_policy->up_rate_delay_ns;
+        if (next_freq > sg_policy->next_freq) {
+                bool blocked = delta_ns < sg_policy->up_rate_delay_ns;
 
-        if (next_freq < sg_policy->next_freq)
-                return delta_ns < sg_policy->down_rate_delay_ns;
+                trace_printk("sss_rl UP cur=%u next=%u delta_ns=%lld thres=%lld blocked=%d\n",
+                             sg_policy->next_freq, next_freq, delta_ns,
+                             sg_policy->up_rate_delay_ns, blocked);
+                return blocked;
+        }
+
+        if (next_freq < sg_policy->next_freq) {
+                bool blocked = delta_ns < sg_policy->down_rate_delay_ns;
+
+                trace_printk("sss_rl DOWN cur=%u next=%u delta_ns=%lld thres=%lld blocked=%d\n",
+                             sg_policy->next_freq, next_freq, delta_ns,
+                             sg_policy->down_rate_delay_ns, blocked);
+                return blocked;
+        }
 
         return false;
 }
@@ -173,9 +185,15 @@ static unsigned int sss_get_next_freq(struct sss_policy *sg_policy,
         else
                 freq = map_util_freq(util, freq, max);
 
+        trace_printk("sss_hispeed raw_freq=%u load_pct=%u thres=%u hispeed_freq=%u\n",
+                     freq, load_pct, tunables->hispeed_load, tunables->hispeed_freq);
+
         if (tunables->hispeed_freq && load_pct >= tunables->hispeed_load &&
-            freq < tunables->hispeed_freq)
+            freq < tunables->hispeed_freq) {
+                trace_printk("sss_hispeed FLOOR_APPLIED %u -> %u\n",
+                             freq, tunables->hispeed_freq);
                 freq = tunables->hispeed_freq;
+        }
 
         if (freq == sg_policy->cached_raw_freq && !sg_policy->need_freq_update)
                 return sg_policy->next_freq;
