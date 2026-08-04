@@ -1877,13 +1877,42 @@ static int cluster_init(const struct cpumask *mask)
 	cluster->offline_delay_ms = 100;
 	cluster->task_thres = UINT_MAX;
 	cluster->nrrun = cluster->num_cpus;
-	cluster->enable = true;
+	cluster->enable = false;
 	{
 		int __sig_i;
 
-		for (__sig_i = 0; __sig_i < MAX_CPUS_PER_CLUSTER; __sig_i++) {
-			cluster->busy_up_thres[__sig_i] = 60;
-			cluster->busy_down_thres[__sig_i] = 30;
+		switch (first_cpu) {
+		case 2:
+			cluster->min_cpus = 3;
+			cluster->task_thres = 3;
+			for (__sig_i = 0; __sig_i < MAX_CPUS_PER_CLUSTER; __sig_i++) {
+				cluster->busy_up_thres[__sig_i] = 60;
+				cluster->busy_down_thres[__sig_i] = 30;
+			}
+			cluster->enable = false;
+			break;
+		case 5:
+			cluster->min_cpus = 0;
+			cluster->min_partial_cpus = 2;
+			cluster->task_thres = 2;
+			for (__sig_i = 0; __sig_i < MAX_CPUS_PER_CLUSTER; __sig_i++) {
+				cluster->busy_up_thres[__sig_i] = 60;
+				cluster->busy_down_thres[__sig_i] = 30;
+			}
+			cluster->enable = true;
+			break;
+		case 7:
+			cluster->min_cpus = 0;
+			cluster->task_thres = 1;
+			for (__sig_i = 0; __sig_i < MAX_CPUS_PER_CLUSTER; __sig_i++) {
+				cluster->busy_up_thres[__sig_i] = 60;
+				cluster->busy_down_thres[__sig_i] = 30;
+			}
+			cluster->enable = true;
+			break;
+		default:
+			cluster->enable = false;
+			break;
 		}
 	}
 	cluster->nr_not_preferred_cpus = 0;
