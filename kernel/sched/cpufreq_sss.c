@@ -837,7 +837,7 @@ static void sss_limits(struct cpufreq_policy *policy)
 }
 
 struct cpufreq_governor sss_gov = {
-        .name                   = "sss",
+        .name                   = "SSS",
         .owner                  = THIS_MODULE,
         .flags                  = CPUFREQ_GOV_DYNAMIC_SWITCHING,
         .init                   = sss_init,
@@ -847,11 +847,11 @@ struct cpufreq_governor sss_gov = {
         .limits                 = sss_limits,
 };
 
-cpufreq_governor_init(sss_gov);
-
 #ifdef CONFIG_CPU_FREQ_DEFAULT_GOV_SSS
 struct cpufreq_governor *cpufreq_default_governor(void)
 {
 	return &sss_gov;
 }
 #endif
+
+cpufreq_governor_init(sss_gov);
