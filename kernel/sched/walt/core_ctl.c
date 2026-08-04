@@ -1877,7 +1877,15 @@ static int cluster_init(const struct cpumask *mask)
 	cluster->offline_delay_ms = 100;
 	cluster->task_thres = UINT_MAX;
 	cluster->nrrun = cluster->num_cpus;
-	cluster->enable = false;
+	cluster->enable = true;
+	{
+		int __sig_i;
+
+		for (__sig_i = 0; __sig_i < MAX_CPUS_PER_CLUSTER; __sig_i++) {
+			cluster->busy_up_thres[__sig_i] = 60;
+			cluster->busy_down_thres[__sig_i] = 30;
+		}
+	}
 	cluster->nr_not_preferred_cpus = 0;
 	cluster->strict_nrrun = 0;
 	cluster->nr_big = 0;
