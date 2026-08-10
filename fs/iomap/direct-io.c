@@ -214,30 +214,15 @@ static void iomap_dio_done(struct iomap_dio *dio)
 		iocb->ki_complete(iocb, 0);
 	} else {
 		struct inode *inode = file_inode(iocb->ki_filp);
-		struct super_block *sb = inode->i_sb;
 
 		/*
 		 * Async DIO completion that requires filesystem level
 		 * completion work gets punted to a work queue to complete as
 		 * the operation may require more IO to be issued to finalise
 		 * filesystem metadata changes or guarantee data integrity.
-		 *
-		 * Guard against s_dio_done_wq being NULL due to a race where
-		 * wait_for_completion was set to true after the wq init check
-		 * in iomap_dio_rw() (e.g. via -ENOTBLK fallback path), but a
-		 * concurrent bio end_io fires before the wq was initialized.
-		 * Lazily initialize here to prevent a NULL pointer dereference
-		 * in __queue_work.
 		 */
-		if (unlikely(!sb->s_dio_done_wq)) {
-			if (sb_init_dio_done_wq(sb) < 0) {
-				/* Last resort: run inline if wq alloc failed */
-				iomap_dio_complete_work(&dio->aio.work);
-				return;
-			}
-		}
 		INIT_WORK(&dio->aio.work, iomap_dio_complete_work);
-		queue_work(sb->s_dio_done_wq, &dio->aio.work);
+		queue_work(inode->i_sb->s_dio_done_wq, &dio->aio.work);
 	}
 }
 
