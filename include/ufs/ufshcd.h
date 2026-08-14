@@ -615,6 +615,11 @@ enum ufshcd_quirks {
 	UFSHCD_QUIRK_SKIP_DEF_UNIPRO_TIMEOUT_SETTING = 1 << 13,
 
 	/*
+	 * Align DMA SG entries on a 4 KiB boundary.
+	 */
+	UFSHCD_QUIRK_4KB_DMA_ALIGNMENT			= 1 << 14,
+
+	/*
 	 * This quirk needs to be enabled if the host controller does not
 	 * support UIC command
 	 */
@@ -662,6 +667,13 @@ enum ufshcd_quirks {
 	 * doorbell mode actually works.
 	 */
 	UFSHCD_QUIRK_BROKEN_LSDBS_CAP			= 1 << 22,
+
+	/*
+	 * This quirk indicates that DME_LINKSTARTUP should not be issued a 2nd
+	 * time (refer link_startup_again) after the 1st time was successful,
+	 * because it causes link startup to become unreliable.
+	 */
+	UFSHCD_QUIRK_PERFORM_LINK_STARTUP_ONCE		= 1 << 26,
 };
 
 enum ufshcd_android_quirks {
@@ -1328,7 +1340,6 @@ unsigned long ufshcd_mcq_poll_cqe_lock(struct ufs_hba *hba,
 void ufshcd_mcq_make_queues_operational(struct ufs_hba *hba);
 void ufshcd_mcq_enable_esi(struct ufs_hba *hba);
 void ufshcd_mcq_config_esi(struct ufs_hba *hba, struct msi_msg *msg);
-void ufshcd_complete_requests(struct ufs_hba *hba, bool force_compl);
 void ufshcd_release_scsi_cmd(struct ufs_hba *hba,
 				    struct ufshcd_lrb *lrbp);
 void ufshcd_err_handling_prepare(struct ufs_hba *hba);
@@ -1443,10 +1454,6 @@ int ufshcd_read_desc_param(struct ufs_hba *hba,
 int ufshcd_query_attr_retry(struct ufs_hba *hba,
 	enum query_opcode opcode, enum attr_idn idn, u8 index, u8 selector,
 	u32 *attr_val);
-int ufshcd_query_flag_retry(struct ufs_hba *hba,
-	enum query_opcode opcode, enum flag_idn idn, u8 index, bool *flag_res);
-
-int ufshcd_bkops_ctrl(struct ufs_hba *hba, enum bkops_status status);
 
 void ufshcd_auto_hibern8_enable(struct ufs_hba *hba);
 void ufshcd_auto_hibern8_update(struct ufs_hba *hba, u32 ahit);
