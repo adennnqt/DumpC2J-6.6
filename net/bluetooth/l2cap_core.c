@@ -7636,7 +7636,7 @@ static int l2cap_recv_frag(struct l2cap_conn *conn, struct sk_buff *skb,
 		conn->rx_len = len;
 
 		skb_set_delivery_time(conn->rx_skb, skb->tstamp,
-				      skb->tstamp_type);
+				      skb->mono_delivery_time);
 	}
 
 	/* Copy as much as the rx_skb can hold */
