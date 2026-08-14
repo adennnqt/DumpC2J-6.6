@@ -13,6 +13,7 @@
 
 #include <linux/bitops.h>
 #include <linux/types.h>
+#include <linux/time64.h>
 #include <linux/android_kabi.h>
 #include <linux/android_vendor.h>
 #include <uapi/scsi/scsi_bsg_ufs.h>
