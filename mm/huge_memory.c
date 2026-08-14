@@ -3247,7 +3247,7 @@ static void __split_huge_page_tail(struct folio *folio, int tail,
 }
 
 static void __split_huge_page(struct page *page, struct list_head *list,
-		pgoff_t end, struct address_space *mapping)
+		pgoff_t end)
 {
 	struct folio *folio = page_folio(page);
 	struct page *head = &folio->page;
@@ -3327,19 +3327,6 @@ static void __split_huge_page(struct page *page, struct list_head *list,
 	if (nr_dropped)
 		shmem_uncharge(head->mapping->host, nr_dropped);
 	remap_page(folio, nr);
-
-	if (folio_test_swapcache(folio))
-		split_swap_cluster(folio->swap);
-
-	/*
-	 * Drop the mapping while the head page is still locked and thus pins
-	 * the inode. The loop below may free the after-split subpages --
-	 * including the head, when @page is a tail beyond EOF that the split
-	 * dropped from the page cache -- which could otherwise let the inode,
-	 * and @mapping, be freed before this unlock.
-	 */
-	if (mapping)
-		i_mmap_unlock_read(mapping);
 
 	for (i = 0; i < nr; i++) {
 		struct page *subpage = folio_dst_page(folio, i);
@@ -3546,12 +3533,8 @@ int split_huge_page_to_list(struct page *page, struct list_head *list)
 		}
 	}
 
-		__split_huge_page(page, list, end, mapping);
-		/* __split_huge_page() dropped the i_mmap lock */
-		mapping = NULL;
-		ret = 0;
-	} else {
-		spin_unlock(&ds_queue->split_queue_lock);
+	__split_huge_page(page, list, end);
+	if (ret) {
 fail:
 		if (mapping)
 			xas_unlock(&xas);
