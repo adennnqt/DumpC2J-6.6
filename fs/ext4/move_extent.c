@@ -17,23 +17,26 @@
  * get_ext_path() - Find an extent path for designated logical block number.
  * @inode:	inode to be searched
  * @lblock:	logical block number to find an extent path
- * @path:	pointer to an extent path
+ * @ppath:	pointer to an extent path pointer (for output)
  *
- * ext4_find_extent wrapper. Return an extent path pointer on success,
- * or an error pointer on failure.
+ * ext4_find_extent wrapper. Return 0 on success, or a negative error value
+ * on failure.
  */
-static inline struct ext4_ext_path *
+static inline int
 get_ext_path(struct inode *inode, ext4_lblk_t lblock,
-	     struct ext4_ext_path *path)
+		struct ext4_ext_path **ppath)
 {
-	path = ext4_find_extent(inode, lblock, path, EXT4_EX_NOCACHE);
+	struct ext4_ext_path *path;
+
+	path = ext4_find_extent(inode, lblock, ppath, EXT4_EX_NOCACHE);
 	if (IS_ERR(path))
-		return path;
+		return PTR_ERR(path);
 	if (path[ext_depth(inode)].p_ext == NULL) {
 		ext4_free_ext_path(path);
-		return ERR_PTR(-ENODATA);
+		*ppath = NULL;
+		return -ENODATA;
 	}
-	return path;
+	return 0;
 }
 
 /**
@@ -91,11 +94,9 @@ mext_check_coverage(struct inode *inode, ext4_lblk_t from, ext4_lblk_t count,
 	int ret = 0;
 	ext4_lblk_t last = from + count;
 	while (from < last) {
-		path = get_ext_path(inode, from, path);
-		if (IS_ERR(path)) {
-			*err = PTR_ERR(path);
-			return ret;
-		}
+		*err = get_ext_path(inode, from, &path);
+		if (*err)
+			goto out;
 		ext = path[ext_depth(inode)].p_ext;
 		if (unwritten != ext4_ext_is_unwritten(ext))
 			goto out;
@@ -632,11 +633,9 @@ ext4_move_extents(struct file *o_filp, struct file *d_filp, __u64 orig_blk,
 		int offset_in_page;
 		int unwritten, cur_len;
 
-		path = get_ext_path(orig_inode, o_start, path);
-		if (IS_ERR(path)) {
-			ret = PTR_ERR(path);
+		ret = get_ext_path(orig_inode, o_start, &path);
+		if (ret)
 			goto out;
-		}
 		ex = path[path->p_depth].p_ext;
 		cur_blk = le32_to_cpu(ex->ee_block);
 		cur_len = ext4_ext_get_actual_len(ex);
