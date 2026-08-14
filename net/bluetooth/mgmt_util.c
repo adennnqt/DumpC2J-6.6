@@ -24,8 +24,6 @@
 #include <linux/mutex.h>
 #include <asm/unaligned.h>
 
-DEFINE_MUTEX(mgmt_pending_list_lock);
-
 #include <net/bluetooth/bluetooth.h>
 #include <net/bluetooth/hci_core.h>
 #include <net/bluetooth/hci_mon.h>
@@ -220,30 +218,47 @@ int mgmt_cmd_complete(struct sock *sk, u16 index, u16 cmd, u8 status,
 struct mgmt_pending_cmd *mgmt_pending_find(unsigned short channel, u16 opcode,
 					   struct hci_dev *hdev)
 {
-	struct mgmt_pending_cmd *cmd;
+	struct mgmt_pending_cmd *cmd, *tmp;
 
-	list_for_each_entry(cmd, &hdev->mgmt_pending, list) {
+	mutex_lock(&hdev->mgmt_pending_lock);
+
+	list_for_each_entry_safe(cmd, tmp, &hdev->mgmt_pending, list) {
 		if (hci_sock_get_channel(cmd->sk) != channel)
 			continue;
-		if (cmd->opcode == opcode)
+
+		if (cmd->opcode == opcode) {
+			mutex_unlock(&hdev->mgmt_pending_lock);
 			return cmd;
+		}
 	}
+
+	mutex_unlock(&hdev->mgmt_pending_lock);
 
 	return NULL;
 }
 
-void mgmt_pending_foreach(u16 opcode, struct hci_dev *hdev,
+void mgmt_pending_foreach(u16 opcode, struct hci_dev *hdev, bool remove,
 			  void (*cb)(struct mgmt_pending_cmd *cmd, void *data),
 			  void *data)
 {
 	struct mgmt_pending_cmd *cmd, *tmp;
 
+	mutex_lock(&hdev->mgmt_pending_lock);
+
 	list_for_each_entry_safe(cmd, tmp, &hdev->mgmt_pending, list) {
 		if (opcode > 0 && cmd->opcode != opcode)
 			continue;
 
+		if (remove)
+			list_del(&cmd->list);
+
 		cb(cmd, data);
+
+		if (remove)
+			mgmt_pending_free(cmd);
 	}
+
+	mutex_unlock(&hdev->mgmt_pending_lock);
 }
 
 struct mgmt_pending_cmd *mgmt_pending_new(struct sock *sk, u16 opcode,
@@ -257,7 +272,7 @@ struct mgmt_pending_cmd *mgmt_pending_new(struct sock *sk, u16 opcode,
 		return NULL;
 
 	cmd->opcode = opcode;
-	cmd->index = hdev->id;
+	cmd->hdev = hdev;
 
 	cmd->param = kmemdup(data, len, GFP_KERNEL);
 	if (!cmd->param) {
@@ -283,7 +298,9 @@ struct mgmt_pending_cmd *mgmt_pending_add(struct sock *sk, u16 opcode,
 	if (!cmd)
 		return NULL;
 
+	mutex_lock(&hdev->mgmt_pending_lock);
 	list_add_tail(&cmd->list, &hdev->mgmt_pending);
+	mutex_unlock(&hdev->mgmt_pending_lock);
 
 	return cmd;
 }
@@ -297,7 +314,10 @@ void mgmt_pending_free(struct mgmt_pending_cmd *cmd)
 
 void mgmt_pending_remove(struct mgmt_pending_cmd *cmd)
 {
+	mutex_lock(&cmd->hdev->mgmt_pending_lock);
 	list_del(&cmd->list);
+	mutex_unlock(&cmd->hdev->mgmt_pending_lock);
+
 	mgmt_pending_free(cmd);
 }
 
@@ -305,7 +325,7 @@ bool __mgmt_pending_listed(struct hci_dev *hdev, struct mgmt_pending_cmd *cmd)
 {
 	struct mgmt_pending_cmd *tmp;
 
-	lockdep_assert_held(&mgmt_pending_list_lock);
+	lockdep_assert_held(&hdev->mgmt_pending_lock);
 
 	if (!cmd)
 		return false;
@@ -322,9 +342,9 @@ bool mgmt_pending_listed(struct hci_dev *hdev, struct mgmt_pending_cmd *cmd)
 {
 	bool listed;
 
-	mutex_lock(&mgmt_pending_list_lock);
+	mutex_lock(&hdev->mgmt_pending_lock);
 	listed = __mgmt_pending_listed(hdev, cmd);
-	mutex_unlock(&mgmt_pending_list_lock);
+	mutex_unlock(&hdev->mgmt_pending_lock);
 
 	return listed;
 }
@@ -336,13 +356,13 @@ bool mgmt_pending_valid(struct hci_dev *hdev, struct mgmt_pending_cmd *cmd)
 	if (!cmd)
 		return false;
 
-	mutex_lock(&mgmt_pending_list_lock);
+	mutex_lock(&hdev->mgmt_pending_lock);
 
 	listed = __mgmt_pending_listed(hdev, cmd);
 	if (listed)
 		list_del(&cmd->list);
 
-	mutex_unlock(&mgmt_pending_list_lock);
+	mutex_unlock(&hdev->mgmt_pending_lock);
 
 	return listed;
 }
