@@ -736,6 +736,10 @@ struct device {
 					   core doesn't touch it */
 	void		*driver_data;	/* Driver data, set and get with
 					   dev_set_drvdata/dev_get_drvdata */
+	struct {
+		const char	*name;
+		spinlock_t	lock;
+	} driver_override;
 	struct mutex		mutex;	/* mutex to synchronize calls to
 					 * its driver.
 					 */
@@ -1320,5 +1324,37 @@ void device_link_wait_removal(void);
 	MODULE_ALIAS("char-major-" __stringify(major) "-" __stringify(minor))
 #define MODULE_ALIAS_CHARDEV_MAJOR(major) \
 	MODULE_ALIAS("char-major-" __stringify(major) "-*")
+
+int __device_set_driver_override(struct device *dev, const char *s, size_t len);
+
+static inline int device_set_driver_override(struct device *dev, const char *s)
+{
+	return __device_set_driver_override(dev, s, s ? strlen(s) : 0);
+}
+
+static inline bool device_has_driver_override(struct device *dev)
+{
+	unsigned long flags;
+	spin_lock_irqsave(&dev->driver_override.lock, flags);
+	if (dev->driver_override.name)
+		return true;
+	spin_unlock_irqrestore(&dev->driver_override.lock, flags);
+	return false;
+}
+
+static inline int device_match_driver_override(struct device *dev,
+					       const struct device_driver *drv)
+{
+	unsigned long flags;
+	int ret;
+
+	spin_lock_irqsave(&dev->driver_override.lock, flags);
+	if (dev->driver_override.name)
+		ret = !strcmp(dev->driver_override.name, drv->name);
+	else
+		ret = -1;
+	spin_unlock_irqrestore(&dev->driver_override.lock, flags);
+	return ret;
+}
 
 #endif /* _DEVICE_H_ */

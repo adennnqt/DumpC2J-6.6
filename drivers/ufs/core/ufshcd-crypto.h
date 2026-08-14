@@ -70,6 +70,12 @@ ufshcd_prepare_req_desc_hdr_crypto(struct ufshcd_lrb *lrbp,
 static inline void ufshcd_crypto_clear_prdt(struct ufs_hba *hba,
 					    struct ufshcd_lrb *lrbp) { }
 
+static inline int ufshcd_crypto_fill_prdt(struct ufs_hba *hba,
+					  struct scsi_cmnd *cmd)
+{
+	return 0;
+}
+
 static inline bool ufshcd_crypto_enable(struct ufs_hba *hba)
 {
 	return false;

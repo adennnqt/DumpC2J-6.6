@@ -161,4 +161,17 @@ seq_buf_bprintf(struct seq_buf *s, const char *fmt, const u32 *binary);
 
 void seq_buf_do_printk(struct seq_buf *s, const char *lvl);
 
+static inline const char *seq_buf_str(struct seq_buf *s)
+{
+	if (WARN_ON(s->size == 0))
+		return "";
+
+	if (seq_buf_buffer_left(s))
+		s->buffer[s->len] = 0;
+	else
+		s->buffer[s->size - 1] = 0;
+
+	return s->buffer;
+}
+
 #endif /* _LINUX_SEQ_BUF_H */
