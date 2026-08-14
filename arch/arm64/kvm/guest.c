@@ -30,10 +30,7 @@
 #include "trace.h"
 
 const struct _kvm_stats_desc kvm_vm_stats_desc[] = {
-	KVM_GENERIC_VM_STATS(),
-	STATS_DESC_ICOUNTER(VM, protected_hyp_mem),
-	STATS_DESC_ICOUNTER(VM, protected_shared_mem),
-	STATS_DESC_ICOUNTER(VM, protected_pgtable_mem),
+	KVM_GENERIC_VM_STATS()
 };
 
 const struct kvm_stats_header kvm_vm_stats_header = {
@@ -1076,7 +1073,7 @@ int kvm_vm_ioctl_mte_copy_tags(struct kvm *kvm,
 		} else {
 			/*
 			 * Only locking to serialise with a concurrent
-			 * __set_ptes() in the VMM but still overriding the
+			 * set_ptes() in the VMM but still overriding the
 			 * tags, hence ignoring the return value.
 			 */
 			try_page_mte_tagging(page);

@@ -954,6 +954,8 @@ static void __dma_rx_do_complete(struct uart_8250_port *p)
 				dev_err(p->port.dev, "teardown incomplete\n");
 		}
 	}
+
+	dma->rx_running = 0;
 	if (!count)
 		goto out;
 	ret = tty_insert_flip_string(tty_port, dma->rx_buf, count);

@@ -278,7 +278,7 @@ static inline void __set_pte(pte_t *ptep, pte_t pte)
 		dsb(ishst);
 		isb();
 	}
-}
+ }
 
 static inline pte_t __ptep_get(pte_t *ptep)
 {
@@ -1015,7 +1015,7 @@ static inline void ___ptep_set_wrprotect(struct mm_struct *mm,
 					pte_t pte)
 {
 	pte_t old_pte;
-
+	pte = __ptep_get(ptep);
 	do {
 		old_pte = pte;
 		pte = pte_wrprotect(pte);
@@ -1157,7 +1157,7 @@ extern void arch_swap_restore(swp_entry_t entry, struct folio *folio);
 #endif /* CONFIG_ARM64_MTE */
 
 /*
- * On AArch64, the cache coherency is handled via the __set_ptes() function.
+ * On AArch64, the cache coherency is handled via the set_ptes() function.
  */
 static inline void update_mmu_cache_range(struct vm_fault *vmf,
 		struct vm_area_struct *vma, unsigned long addr, pte_t *ptep,
