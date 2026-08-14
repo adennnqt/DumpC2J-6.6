@@ -1401,3 +1401,24 @@ void driver_detach(struct device_driver *drv)
 		put_device(dev);
 	}
 }
+
+int __device_set_driver_override(struct device *dev, const char *s, size_t len)
+{
+	char *cp;
+	unsigned long flags;
+
+	if (!s || !len)
+		return -EINVAL;
+
+	cp = kstrndup(s, len, GFP_KERNEL);
+	if (!cp)
+		return -ENOMEM;
+
+	spin_lock_irqsave(&dev->driver_override.lock, flags);
+	kfree(dev->driver_override.name);
+	dev->driver_override.name = cp;
+	spin_unlock_irqrestore(&dev->driver_override.lock, flags);
+
+	return 0;
+}
+EXPORT_SYMBOL_GPL(__device_set_driver_override);
