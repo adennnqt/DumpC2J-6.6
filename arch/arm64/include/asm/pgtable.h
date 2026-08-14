@@ -278,7 +278,7 @@ static inline void __set_pte(pte_t *ptep, pte_t pte)
 		dsb(ishst);
 		isb();
 	}
- }
+}
 
 static inline pte_t __ptep_get(pte_t *ptep)
 {
@@ -348,8 +348,8 @@ static inline void __sync_cache_and_tags(pte_t pte, unsigned int nr_pages)
 	 */
 	if (system_supports_mte() && pte_access_permitted(pte, false) &&
 	    !pte_special(pte) && pte_tagged(pte))
-		mte_sync_tags(pte, nr_pages);
-}
+		mte_sync_tags(pte);
+	}
 
 /*
  * Select all bits except the pfn
