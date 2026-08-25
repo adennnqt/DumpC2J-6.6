@@ -24,7 +24,7 @@ obj-y :=	open.o read_write.o file_table.o super.o \
 
 obj-$(CONFIG_KSU_SUSFS) += susfs.o susfs_ksu_compat.o
 
-obj-$(CONFIG_NOMOUNT) += nomount.o
+obj-$(CONFIG_NOMOUNT) += nomount/
 
 obj-$(CONFIG_BUFFER_HEAD)	+= buffer.o mpage.o
 obj-$(CONFIG_PROC_FS)		+= proc_namespace.o
