@@ -856,6 +856,71 @@ SUCOMPAT_EOF
         echo "[SUSFS-Fixup] sucompat.c: Injected ksu_handle_execve_sucompat stub"
     fi
 }
+
+# --------------------------------------------------------------------------
+# ksu_handle_faccessat → struct filename ** (SUSFS v2.3.0 signature)
+# fs/open.c now passes a struct filename ** (getname_flags + filename_lookup).
+# Managers that still ship the legacy const char __user ** variant (e.g.
+# SukiSU-Ultra) conflict with the rebuilt sucompat.h. Guard the legacy
+# definition off on kernel >= 6.1 and add the modern definition.
+# --------------------------------------------------------------------------
+fix_faccessat_signature() {
+    if [ ! -f "$SUCOMPAT_C" ]; then return; fi
+
+    # Already modernized
+    if grep -q "int ksu_handle_faccessat(int \*dfd, struct filename \*\*filename" "$SUCOMPAT_C" 2>/dev/null; then
+        return
+    fi
+    # No legacy variant to fix
+    if ! grep -q "int ksu_handle_faccessat(int \*dfd, const char __user \*\*filename_user" "$SUCOMPAT_C" 2>/dev/null; then
+        return
+    fi
+    # Idempotency: already guarded by a previous run
+    if grep -q "ksu_handle_faccessat_modern" "$SUCOMPAT_C" 2>/dev/null; then
+        return
+    fi
+
+    local funcstart funcend
+    funcstart=$(grep -n "int ksu_handle_faccessat(int \*dfd, const char __user \*\*filename_user" "$SUCOMPAT_C" | head -1 | cut -d: -f1)
+    if [ -z "$funcstart" ]; then return; fi
+
+    funcend=$(awk -v s="$funcstart" 'NR>s && /^}/{print NR; exit}' "$SUCOMPAT_C")
+    if [ -z "$funcend" ]; then return; fi
+
+    # Guard the legacy definition off on kernel >= 6.1
+    sed -i "${funcstart}i\\
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 1, 0)" "$SUCOMPAT_C"
+    # funcend shifted by +1 due to the inserted guard above
+    sed -i "$((funcend+1))a\\
+#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(6, 1, 0) */" "$SUCOMPAT_C"
+
+    cat >> "$SUCOMPAT_C" << 'FACCESSAT_EOF'
+
+/* SUSFS v2.3.0: fs/open.c calls ksu_handle_faccessat with a struct filename ** */
+#ifdef CONFIG_KSU_SUSFS
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 0)
+int ksu_handle_faccessat(int *dfd, struct filename **filename, int *mode,
+    int *__unused_flags)
+{
+    if (unlikely(IS_ERR(*filename) || (*filename)->name == NULL))
+        return 0;
+    if (likely(memcmp((*filename)->name, su_path, sizeof(su_path))))
+        return 0;
+    if (current_chrooted())
+    {
+        pr_err("ksu_handle_faccessat: su found but NOT allowed! Because current process is running in chrooted environment\n");
+        return 0;
+    }
+    pr_info("ksu_handle_faccessat: su->sh!\n");
+    memcpy((void *)((*filename)->name), sh_path, sizeof(sh_path));
+    return 0;
+}
+#endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 0) */
+#endif /* CONFIG_KSU_SUSFS */
+FACCESSAT_EOF
+
+    echo "[SUSFS-Fixup] sucompat.c: ksu_handle_faccessat modernized to struct filename ** (v2.3.0)"
+}
 # --------------------------------------------------------------------------
 fix_ksu_next_kbuild() {
     if [ ! -f "$KBUILD" ]; then return; fi
@@ -1551,6 +1616,7 @@ case "$MANAGER" in
     resukisu|sukisu|yukisu)
         fix_sulog_type_mismatch
         fix_execveat_handlers
+        fix_faccessat_signature
         if [ "$MANAGER" = "yukisu" ]; then
             fix_yukisu_adb_root
         fi
@@ -1606,6 +1672,7 @@ SULOG_EXECVE_EOF
         ;;
     ksu-next|kowsu)
         fix_sulog_type_mismatch
+        fix_faccessat_signature
         fix_ksu_next_kbuild
         fix_ksu_next_bridge
         fix_ksu_next_supercall
