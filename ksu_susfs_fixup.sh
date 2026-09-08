@@ -315,7 +315,7 @@ extern struct static_key_true ksu_su_compat_enabled;
 void ksu_sucompat_init(void);
 void ksu_sucompat_exit(void);
 
-int ksu_handle_faccessat(int *dfd, const char __user **filename_user, int *mode, int *__unused_flags);
+int ksu_handle_faccessat(int *dfd, struct filename **filename, int *mode, int *__unused_flags);
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 0)
 int ksu_handle_stat(int *dfd, struct filename **filename, int *flags);
@@ -338,7 +338,7 @@ extern bool ksu_su_compat_enabled;
 void ksu_sucompat_init(void);
 void ksu_sucompat_exit(void);
 
-int ksu_handle_faccessat(int *dfd, const char __user **filename_user, int *mode, int *__unused_flags);
+int ksu_handle_faccessat(int *dfd, struct filename **filename, int *mode, int *__unused_flags);
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 0)
 int ksu_handle_stat(int *dfd, struct filename **filename, int *flags);
@@ -1596,7 +1596,7 @@ SULOG_EXECVE_EOF
             cat >> "$SUCOMPAT_C" << 'VFS_STUBS_EOF'
 
 /* VFS hook stubs — fs/open.c and fs/stat.c call these names */
-int ksu_handle_faccessat(int *dfd, const char __user **filename_user, int *mode,
+int ksu_handle_faccessat(int *dfd, struct filename **filename, int *mode,
     int *__unused_flags)
 {
     if (unlikely(!filename_user))
