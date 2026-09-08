@@ -158,6 +158,31 @@ SULOG_EVENT_H="$KSU_KERNEL/sulog/event.h"
 SULOG_EVENT_C="$KSU_KERNEL/sulog/event.c"
 KERNEL_UMOUNT_C="$KSU_KERNEL/feature/kernel_umount.c"
 
+# ==========================================================================
+# [SHARED] supercall.c — ksu_install_su_fd stub (SUSFS v2.3.0 compat)
+# ==========================================================================
+# SUSFS v2.3.0 moved the su fd install out of 10_enable (which removed
+# su_fd = ksu_install_su_fd() from the sucompat handler) and instead calls
+# ksu_install_su_fd() directly from fs/exec.c after a successful su exec.
+# Forks that do not implement the KSU_DRIVER_PERMISSION_SU_SESSION mechanism
+# (e.g. ReSukiSU / SukiSU-Ultra) therefore fail to link with:
+#   ld.lld: error: undefined symbol: ksu_install_su_fd
+# Provide a no-op stub (returning success, no fd) only when the fork lacks it.
+if [ -f "$SUPERCALL_C" ] && ! grep -q "ksu_install_su_fd" "$SUPERCALL_C" 2>/dev/null; then
+    cat >> "$SUPERCALL_C" << 'SU_FD_STUB_EOF'
+
+#ifdef CONFIG_KSU_SUSFS
+/* SUSFS v2.3.0: fs/exec.c calls ksu_install_su_fd() after a su session exec.
+ * Forks without the SU-session fd mechanism satisfy the link with a no-op. */
+int ksu_install_su_fd(void)
+{
+    return 0;
+}
+#endif // #ifdef CONFIG_KSU_SUSFS
+SU_FD_STUB_EOF
+    echo "[SUSFS-Fixup] supercall.c: Added ksu_install_su_fd stub (SUSFS v2.3.0)"
+fi
+
 echo "[SUSFS-Fixup] Starting compatibility fixups..."
 
 # ==========================================================================
