@@ -86,6 +86,25 @@ if [ "$MANAGER" = "sukisu" ]; then
             echo "[SUSFS-Fixup] $(basename "$kbuild_candidate"): Excluded selinux_hide.o from build for sukisu (upstream builtin branch is broken)"
         fi
     done
+
+    # [FIX] kernel_umount.c — upstream "builtin" tip (4.2.0) registers
+    # .set_handler = kernel_umount_feature_set but never defines it (getter
+    # only), so the driver fails to compile. Inject the missing setter.
+    KSU_UMOUNT_C="$KSU_KERNEL/feature/kernel_umount.c"
+    if [ -f "$KSU_UMOUNT_C" ] && ! grep -q "static int kernel_umount_feature_set" "$KSU_UMOUNT_C" 2>/dev/null; then
+        sed -i '/static const struct ksu_feature_handler kernel_umount_handler = {/i\
+static int kernel_umount_feature_set(u64 value)\
+{\
+    ksu_kernel_umount_enabled = value ? true : false;\
+    return 0;\
+}\
+' "$KSU_UMOUNT_C"
+        if ! grep -q "static int kernel_umount_feature_set" "$KSU_UMOUNT_C" 2>/dev/null; then
+            echo "[SUSFS-Fixup] ERROR: failed to inject kernel_umount_feature_set (anchor moved upstream)" >&2
+            exit 1
+        fi
+        echo "[SUSFS-Fixup] kernel_umount.c: injected missing kernel_umount_feature_set"
+    fi
 fi
 
 if [ "$MANAGER" = "resukisu" ]; then
